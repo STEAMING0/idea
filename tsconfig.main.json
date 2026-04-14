@@ -1,6 +1,6 @@
 {
-  "extends": "@electron-toolkit/tsconfig/tsconfig.main.json",
-  "include": ["src/main/**/*", "src/shared/**/*"],
+  "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
+  "include": ["src/main/**/*", "src/preload/**/*", "src/shared/**/*"],
   "compilerOptions": {
     "outDir": "dist/main",
     "baseUrl": ".",
