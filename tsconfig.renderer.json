@@ -1,0 +1,14 @@
+{
+  "extends": "@electron-toolkit/tsconfig/tsconfig.renderer.json",
+  "include": ["src/renderer/**/*", "src/shared/**/*"],
+  "compilerOptions": {
+    "outDir": "dist/renderer",
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["src/shared/*"],
+      "@renderer/*": ["src/renderer/*"]
+    },
+    "strictNullChecks": true,
+    "noUncheckedIndexedAccess": true
+  }
+}

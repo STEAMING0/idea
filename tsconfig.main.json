@@ -1,0 +1,13 @@
+{
+  "extends": "@electron-toolkit/tsconfig/tsconfig.main.json",
+  "include": ["src/main/**/*", "src/shared/**/*"],
+  "compilerOptions": {
+    "outDir": "dist/main",
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["src/shared/*"]
+    },
+    "strictNullChecks": true,
+    "noUncheckedIndexedAccess": true
+  }
+}
