@@ -83,26 +83,26 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-white text-gray-800">
-      {/* header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+    <div className="flex flex-col h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-gray-800">
         <span className="font-semibold text-sm">Hourly Journal — Settings</span>
         <button
           onClick={() => window.ipc.invoke('window:close', undefined as never)}
-          className="text-gray-300 hover:text-gray-500 text-xl leading-none"
+          className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400 text-xl leading-none"
         >
           ×
         </button>
       </div>
 
-      {/* tabs */}
       <div className="flex gap-1 px-5 pt-3 pb-1">
         {(['general', 'periods'] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`px-3 py-1 text-sm rounded-md capitalize transition-colors ${
-              tab === t ? 'bg-blue-500 text-white' : 'text-gray-500 hover:bg-gray-100'
+              tab === t
+                ? 'bg-blue-500 text-white'
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
             }`}
           >
             {t}
@@ -123,7 +123,7 @@ export default function App() {
               <select
                 value={settings.theme}
                 onChange={(e) => saveSetting('theme', e.target.value as AppSettings['theme'])}
-                className="border border-gray-200 rounded-md px-2 py-1 text-sm focus:outline-none focus:border-blue-400"
+                className="border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:border-blue-400"
               >
                 <option value="system">System</option>
                 <option value="light">Light</option>
@@ -137,7 +137,7 @@ export default function App() {
                 max={120}
                 value={settings.snoozeDurationMinutes}
                 onChange={(e) => saveSetting('snoozeDurationMinutes', Number(e.target.value))}
-                className="w-20 border border-gray-200 rounded-md px-2 py-1 text-sm focus:outline-none focus:border-blue-400"
+                className="w-20 border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:border-blue-400"
               />
             </Row>
             <Row label="Missed period window (minutes)">
@@ -147,7 +147,7 @@ export default function App() {
                 max={240}
                 value={settings.missedWindowMinutes}
                 onChange={(e) => saveSetting('missedWindowMinutes', Number(e.target.value))}
-                className="w-20 border border-gray-200 rounded-md px-2 py-1 text-sm focus:outline-none focus:border-blue-400"
+                className="w-20 border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:border-blue-400"
               />
             </Row>
           </div>
@@ -156,15 +156,15 @@ export default function App() {
         {tab === 'periods' && (
           <div className="space-y-3">
             {periods.length === 0 && !form && (
-              <p className="text-sm text-gray-400">No periods yet. Add one below.</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500">No periods yet. Add one below.</p>
             )}
 
             {periods.map((p) => (
-              <div key={p.id} className="flex items-center gap-3 border border-gray-100 rounded-lg px-3 py-2">
+              <div key={p.id} className="flex items-center gap-3 border border-gray-100 dark:border-gray-800 rounded-lg px-3 py-2">
                 <Toggle value={p.active} onChange={(v) => toggleActive(p.id, v)} />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{p.label}</div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-gray-400 dark:text-gray-500">
                     {p.startTime} – {p.endTime} · {p.days.join(', ')}
                   </div>
                 </div>
@@ -184,39 +184,39 @@ export default function App() {
             ))}
 
             {form ? (
-              <div className="border border-blue-200 rounded-lg p-3 space-y-3 bg-blue-50/30">
+              <div className="border border-blue-200 dark:border-blue-900 rounded-lg p-3 space-y-3 bg-blue-50/30 dark:bg-blue-950/20">
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">Label</label>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Label</label>
                   <input
                     type="text"
                     value={form.label}
                     onChange={(e) => setForm({ ...form, label: e.target.value })}
                     placeholder="e.g. Morning block"
-                    className="w-full border border-gray-200 rounded-md px-2 py-1 text-sm focus:outline-none focus:border-blue-400"
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:border-blue-400"
                   />
                 </div>
                 <div className="flex gap-3">
                   <div className="flex-1">
-                    <label className="text-xs text-gray-500 block mb-1">Start</label>
+                    <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Start</label>
                     <input
                       type="time"
                       value={form.startTime}
                       onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-                      className="w-full border border-gray-200 rounded-md px-2 py-1 text-sm focus:outline-none focus:border-blue-400"
+                      className="w-full border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:border-blue-400"
                     />
                   </div>
                   <div className="flex-1">
-                    <label className="text-xs text-gray-500 block mb-1">End</label>
+                    <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">End</label>
                     <input
                       type="time"
                       value={form.endTime}
                       onChange={(e) => setForm({ ...form, endTime: e.target.value })}
-                      className="w-full border border-gray-200 rounded-md px-2 py-1 text-sm focus:outline-none focus:border-blue-400"
+                      className="w-full border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:border-blue-400"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">Days</label>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Days</label>
                   <div className="flex gap-1">
                     {DAYS.map((d) => (
                       <button
@@ -225,7 +225,7 @@ export default function App() {
                         className={`px-2 py-0.5 rounded text-xs transition-colors ${
                           form.days.includes(d)
                             ? 'bg-blue-500 text-white'
-                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                         }`}
                       >
                         {d}
@@ -234,14 +234,14 @@ export default function App() {
                   </div>
                 </div>
                 <div className="flex items-center justify-between pt-1">
-                  <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                  <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer">
                     <Toggle value={form.active} onChange={(v) => setForm({ ...form, active: v })} />
                     Active
                   </label>
                   <div className="flex gap-2">
                     <button
                       onClick={() => { setForm(null); setEditingId(null) }}
-                      className="px-3 py-1 text-sm text-gray-500 hover:bg-gray-100 rounded-md"
+                      className="px-3 py-1 text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
                     >
                       Cancel
                     </button>
@@ -258,7 +258,7 @@ export default function App() {
             ) : (
               <button
                 onClick={() => { setEditingId(null); setForm(emptyForm()) }}
-                className="w-full border border-dashed border-gray-200 rounded-lg py-2 text-sm text-gray-400 hover:border-blue-300 hover:text-blue-400 transition-colors"
+                className="w-full border border-dashed border-gray-200 dark:border-gray-700 rounded-lg py-2 text-sm text-gray-400 hover:border-blue-300 hover:text-blue-400 transition-colors"
               >
                 + Add period
               </button>
@@ -273,7 +273,7 @@ export default function App() {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-sm text-gray-600">{label}</span>
+      <span className="text-sm text-gray-600 dark:text-gray-300">{label}</span>
       {children}
     </div>
   )
@@ -283,7 +283,7 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
   return (
     <button
       onClick={() => onChange(!value)}
-      className={`relative w-9 h-5 rounded-full transition-colors ${value ? 'bg-blue-500' : 'bg-gray-200'}`}
+      className={`relative w-9 h-5 rounded-full transition-colors ${value ? 'bg-blue-500' : 'bg-gray-200 dark:bg-gray-700'}`}
     >
       <span
         className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${

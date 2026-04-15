@@ -45,26 +45,26 @@ export default function App() {
 
   if(!period){
     return (
-      <div className="flex items-center justify-center h-screen bg-white text-gray-400 text-sm">
+      <div className="flex items-center justify-center h-screen bg-white dark:bg-gray-900 text-gray-400 text-sm">
         Waiting...
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col h-screen bg-white overflow-hidden">
+    <div className="flex flex-col h-screen bg-white dark:bg-gray-900 overflow-hidden">
       <div
         className="flex items-center justify-between px-4 pt-3 pb-2 shrink-0"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <div>
-          <span className="text-sm font-semibold text-gray-800">{period.periodLabel}</span>
-          <span className="text-xs text-gray-400 ml-2">
+          <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{period.periodLabel}</span>
+          <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">
             {formatTime(period.start)} – {formatTime(period.end)}
           </span>
         </div>
         <button
-          className="text-gray-300 hover:text-gray-500 text-xl leading-none"
+          className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400 text-xl leading-none"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           onClick={() => window.ipc.invoke('window:close', undefined as never)}
         >
@@ -82,7 +82,7 @@ export default function App() {
             if(e.key === 'Escape') submit('skipped')
           }}
           placeholder="What did you accomplish this period?"
-          className="w-full h-full resize-none rounded-md border border-gray-200 p-2.5 text-sm focus:outline-none focus:border-blue-400 placeholder-gray-300"
+          className="w-full h-full resize-none rounded-md border border-gray-200 dark:border-gray-700 p-2.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:border-blue-400 placeholder-gray-300 dark:placeholder-gray-600"
         />
       </div>
 
@@ -97,14 +97,14 @@ export default function App() {
         <button
           onClick={() => submit('snoozed')}
           disabled={busy}
-          className="px-4 rounded-md py-1.5 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 disabled:opacity-40 transition-colors"
+          className="px-4 rounded-md py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 transition-colors"
         >
           Snooze
         </button>
         <button
           onClick={() => submit('skipped')}
           disabled={busy}
-          className="px-4 rounded-md py-1.5 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 disabled:opacity-40 transition-colors"
+          className="px-4 rounded-md py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 transition-colors"
         >
           Skip
         </button>

@@ -36,6 +36,7 @@ export class TrayManager {
 
   constructor(wm: WindowManager) {
     const icon = nativeImage.createFromBuffer(Buffer.from(ICON_B64, 'base64'))
+    icon.setTemplateImage(true) // lets macOS invert for light/dark menu bar
     this.tray = new Tray(icon)
     this.tray.setToolTip('Hourly Journal')
     this.buildMenu(wm)

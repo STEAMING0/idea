@@ -7,7 +7,7 @@ const config: Configuration = {
     buildResources: 'build',
     output: 'release'
   },
-  files: ['dist/**/*'],
+  files: ['out/**/*'],
   // Native modules (better-sqlite3) must be rebuilt for Electron's Node version
   npmRebuild: true,
   mac: {
