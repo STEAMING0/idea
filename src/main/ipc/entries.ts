@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron'
-import { getAllEntries, getEntriesByPeriod, createEntry } from '../db'
+import { getAllEntries, getEntriesByPeriod, createEntry, updateEntry, deleteEntry } from '../db'
 import type { IpcInput } from '@shared/types/ipc'
 
 type SnoozeCallback = (periodId: number, snoozeUntil: string) => void
@@ -20,4 +20,12 @@ export function registerEntryHandlers(onSnooze: SnoozeCallback): void {
     }
     return entry
   })
+
+  ipcMain.handle('entries:update', (_, input: IpcInput<'entries:update'>) =>
+    updateEntry(input.id, input.text)
+  )
+
+  ipcMain.handle('entries:delete', (_, input: IpcInput<'entries:delete'>) =>
+    deleteEntry(input.id)
+  )
 }

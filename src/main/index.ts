@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import { join } from 'path'
-import { initDb, getAllSettings, getAllPeriods } from './db'
+import { initDb, getAllSettings } from './db'
 import { WindowManager } from './WindowManager'
 import { TrayManager } from './TrayManager'
 import { Scheduler } from './Scheduler'
@@ -41,6 +41,6 @@ app.whenReady().then(() => {
 
   scheduler.start()
 
-  // Open settings on first launch so the user can configure periods
-  if(getAllPeriods().length === 0) wm.showSettings()
+  // Always open the main window on launch
+  wm.showMain()
 })

@@ -183,6 +183,16 @@ export function createEntry(input: CreateEntryInput): Entry {
   return rowToEntry(row)
 }
 
+export function updateEntry(id: number, text: string): Entry {
+  db.prepare('UPDATE entries SET text = ? WHERE id = ?').run(text, id)
+  const row = db.prepare('SELECT * FROM entries WHERE id = ?').get(id) as EntryRow
+  return rowToEntry(row)
+}
+
+export function deleteEntry(id: number): void {
+  db.prepare('DELETE FROM entries WHERE id = ?').run(id)
+}
+
 export function getEntriesForExport(from?: string, to?: string): Entry[] {
   if(from && to){
     return (db.prepare(

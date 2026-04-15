@@ -48,17 +48,13 @@ export class WindowManager {
     return win
   }
 
+  // Period ended — focus the main window and send it the compose prompt
   showQuickEntry(data: IpcInput<'notify:periodEnd'>): void {
-    const win = this.getOrCreate(
-      WINDOW_QUICK_ENTRY,
-      { width: 480, height: 300, frame: false, alwaysOnTop: true, resizable: false },
-      'quick-entry'
-    )
+    const win = this.getOrCreate(WINDOW_SETTINGS, { width: 820, height: 620 }, 'settings')
 
     const sendAndShow = () => {
       win.webContents.send('notify:periodEnd', data)
       win.show()
-      win.center()
       win.focus()
     }
 
@@ -69,15 +65,14 @@ export class WindowManager {
     }
   }
 
-  showSettings(): void {
-    const win = this.getOrCreate(WINDOW_SETTINGS, { width: 640, height: 520 }, 'settings')
+  showMain(): void {
+    const win = this.getOrCreate(WINDOW_SETTINGS, { width: 820, height: 620 }, 'settings')
     this.showWhenReady(win)
   }
 
-  showLogViewer(): void {
-    const win = this.getOrCreate(WINDOW_LOG_VIEWER, { width: 760, height: 600 }, 'log-viewer')
-    this.showWhenReady(win)
-  }
+  // kept for backward compat with tray / IPC handlers
+  showSettings(): void { this.showMain() }
+  showLogViewer(): void { this.showMain() }
 
   // ready-to-show fires only on the first load; for subsequent opens the window
   // is already loaded but hidden — so we check isLoading() directly

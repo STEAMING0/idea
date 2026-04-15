@@ -45,19 +45,16 @@ export class TrayManager {
   private buildMenu(wm: WindowManager): void {
     const menu = Menu.buildFromTemplate([
       {
-        label: 'Open Settings',
-        click: () => wm.showSettings()
-      },
-      {
-        label: 'View Journal Log',
-        click: () => wm.showLogViewer()
+        label: 'Open Hourly Journal',
+        click: () => wm.showMain()
       },
       { type: 'separator' },
       {
-        label: 'Quit Hourly Journal',
+        label: 'Quit',
         click: () => app.exit(0)
       }
     ])
     this.tray.setContextMenu(menu)
+    this.tray.on('click', () => wm.showMain())
   }
 }

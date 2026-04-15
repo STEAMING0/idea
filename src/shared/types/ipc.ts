@@ -18,6 +18,8 @@ export interface IpcChannels {
   'entries:getAll':   { input: { limit?: number; offset?: number }; output: Entry[] }
   'entries:getByPeriod': { input: { periodId: number }; output: Entry[] }
   'entries:create':   { input: CreateEntryInput;       output: Entry }
+  'entries:update':   { input: { id: number; text: string }; output: Entry }
+  'entries:delete':   { input: { id: number };         output: void }
 
   // Settings
   'settings:getAll':  { input: void;                   output: AppSettings }

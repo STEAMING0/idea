@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { AppSettings } from '@shared/types/settings'
 import type { Period, CreatePeriodInput, DayOfWeek } from '@shared/types/period'
 import type { Entry } from '@shared/types/entry'
+import type { IpcInput } from '@shared/types/ipc'
 import { formatDate, formatTime } from '@shared/utils/time'
 import AnimatedBg from '@renderer/components/AnimatedBg'
 
 const DAYS: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const PAGE_SIZE = 50
 
-type Tab = 'journal' | 'general' | 'periods'
+type Tab = 'journal' | 'periods' | 'settings'
+type PeriodData = IpcInput<'notify:periodEnd'>
 
 type PeriodForm = {
   label: string
@@ -35,13 +37,11 @@ const STATUS_STYLES: Record<Entry['status'], string> = {
 export default function App() {
   const [tab, setTab] = useState<Tab>('journal')
 
-  // ── general settings ──
-  const [settings, setSettings] = useState<AppSettings | null>(null)
-
-  // ── periods ──
-  const [periods, setPeriods] = useState<Period[]>([])
-  const [form, setForm] = useState<PeriodForm | null>(null)
-  const [editingId, setEditingId] = useState<number | null>(null)
+  // ── compose overlay (shown when a period ends) ──
+  const [composePeriod, setComposePeriod] = useState<PeriodData | null>(null)
+  const [composeText, setComposeText] = useState('')
+  const [composeBusy, setComposeBusy] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // ── journal ──
   const [entries, setEntries] = useState<Entry[]>([])
@@ -50,17 +50,31 @@ export default function App() {
   const [loadingEntries, setLoadingEntries] = useState(true)
   const [exporting, setExporting] = useState(false)
   const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [editingEntryId, setEditingEntryId] = useState<number | null>(null)
+  const [editingEntryText, setEditingEntryText] = useState('')
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
+
+  // ── settings ──
+  const [appSettings, setAppSettings] = useState<AppSettings | null>(null)
+
+  // ── periods ──
+  const [periods, setPeriods] = useState<Period[]>([])
+  const [form, setForm] = useState<PeriodForm | null>(null)
+  const [editingId, setEditingId] = useState<number | null>(null)
 
   useEffect(() => {
-    window.ipc.invoke('settings:getAll', undefined as never).then(setSettings)
+    window.ipc.invoke('settings:getAll', undefined as never).then(setAppSettings)
     window.ipc.invoke('periods:getAll', undefined as never).then(setPeriods)
     loadEntries(0)
-  }, [])
 
-  // reload entries when switching to journal tab
-  useEffect(() => {
-    if(tab === 'journal') loadEntries(offset)
-  }, [tab])
+    // Listen for period-end notifications — show compose overlay
+    return window.ipc.on('notify:periodEnd', (data) => {
+      setComposePeriod(data)
+      setComposeText('')
+      setComposeBusy(false)
+      setTimeout(() => textareaRef.current?.focus(), 80)
+    })
+  }, [])
 
   const loadEntries = async (newOffset: number) => {
     setLoadingEntries(true)
@@ -71,6 +85,46 @@ export default function App() {
     setLoadingEntries(false)
   }
 
+  const saveEntryEdit = async (id: number) => {
+    await window.ipc.invoke('entries:update', { id, text: editingEntryText })
+    setEditingEntryId(null)
+    setEntries((prev) => prev.map((e) => e.id === id ? { ...e, text: editingEntryText } : e))
+  }
+
+  const deleteEntry = async (id: number) => {
+    await window.ipc.invoke('entries:delete', { id })
+    setConfirmDeleteId(null)
+    setExpandedId(null)
+    setEntries((prev) => prev.filter((e) => e.id !== id))
+  }
+
+  // ── compose submit ──
+  const submitEntry = async (status: 'written' | 'skipped' | 'snoozed') => {
+    if(!composePeriod || composeBusy) return
+    setComposeBusy(true)
+
+    let snoozeUntil: string | null = null
+    if(status === 'snoozed'){
+      const s = await window.ipc.invoke('settings:getAll', undefined as never)
+      snoozeUntil = new Date(Date.now() + s.snoozeDurationMinutes * 60 * 1000).toISOString()
+    }
+
+    await window.ipc.invoke('entries:create', {
+      periodId: composePeriod.periodId,
+      periodLabel: composePeriod.periodLabel,
+      periodStart: composePeriod.start,
+      periodEnd: composePeriod.end,
+      text: status === 'written' ? composeText.trim() : '',
+      status,
+      createdAt: new Date().toISOString(),
+      snoozeUntil
+    })
+
+    setComposePeriod(null)
+    setTab('journal')
+    loadEntries(0)
+  }
+
   const exportFile = async (type: 'csv' | 'text') => {
     setExporting(true)
     await window.ipc.invoke(type === 'csv' ? 'export:csv' : 'export:text', {})
@@ -78,7 +132,7 @@ export default function App() {
   }
 
   const saveSetting = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
-    setSettings((s) => s ? { ...s, [key]: value } : s)
+    setAppSettings((s) => s ? { ...s, [key]: value } : s)
     window.ipc.invoke('settings:set', { key, value })
   }
 
@@ -130,11 +184,19 @@ export default function App() {
       <AnimatedBg />
 
       <div className="relative z-10 flex flex-col flex-1 min-h-0">
-        {/* header */}
+
+        {/* ── top bar ── */}
         <div className="px-5 py-3 border-b border-white/[0.07] flex items-center justify-between shrink-0">
           <span className="font-semibold text-sm text-white/80">Hourly Journal</span>
           {tab === 'journal' && (
             <div className="flex gap-2">
+              <button
+                onClick={() => loadEntries(0)}
+                disabled={loadingEntries}
+                className="text-xs px-2 py-1 text-white/40 hover:text-white/70 hover:bg-white/[0.07] rounded transition-colors disabled:opacity-30"
+              >
+                Refresh
+              </button>
               <button
                 onClick={() => exportFile('text')}
                 disabled={exporting || entries.length === 0}
@@ -153,9 +215,9 @@ export default function App() {
           )}
         </div>
 
-        {/* tabs */}
+        {/* ── tabs ── */}
         <div className="flex gap-1 px-5 pt-3 pb-1 shrink-0">
-          {(['journal', 'general', 'periods'] as Tab[]).map((t) => (
+          {(['journal', 'periods', 'settings'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -186,10 +248,7 @@ export default function App() {
               {!loadingEntries && entries.map((entry) => {
                 const isExpanded = expandedId === entry.id
                 return (
-                  <div
-                    key={entry.id}
-                    className="border-b border-white/[0.05] hover:bg-white/[0.03] transition-colors"
-                  >
+                  <div key={entry.id} className="border-b border-white/[0.05] hover:bg-white/[0.03] transition-colors">
                     <button
                       onClick={() => setExpandedId(isExpanded ? null : entry.id)}
                       className="w-full text-left px-5 py-3"
@@ -216,18 +275,81 @@ export default function App() {
                     {isExpanded && (
                       <div className="px-5 pb-4">
                         <div className="rounded-lg bg-white/[0.04] border border-white/[0.07] p-3">
-                          {entry.status === 'written' && entry.text ? (
-                            <p className="text-sm text-white/75 whitespace-pre-wrap leading-relaxed">{entry.text}</p>
+                          {editingEntryId === entry.id ? (
+                            <>
+                              <textarea
+                                value={editingEntryText}
+                                onChange={(e) => setEditingEntryText(e.target.value)}
+                                rows={4}
+                                className="w-full resize-none rounded-md p-2 text-sm
+                                  bg-white/[0.06] border border-white/[0.12] text-white/90
+                                  focus:outline-none focus:border-violet-500/50 transition-colors"
+                              />
+                              <div className="flex gap-2 mt-2">
+                                <button
+                                  onClick={() => saveEntryEdit(entry.id)}
+                                  className="px-3 py-1 text-xs bg-violet-600 hover:bg-violet-500 text-white rounded-md transition-colors"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingEntryId(null)}
+                                  className="px-3 py-1 text-xs text-white/45 hover:bg-white/[0.07] rounded-md transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </>
                           ) : (
-                            <p className="text-sm text-white/25 italic">
-                              {entry.status === 'skipped' ? 'Period was skipped.' : 'Period was snoozed.'}
-                            </p>
+                            <>
+                              {entry.status === 'written' && entry.text ? (
+                                <p className="text-sm text-white/75 whitespace-pre-wrap leading-relaxed">{entry.text}</p>
+                              ) : (
+                                <p className="text-sm text-white/25 italic">
+                                  {entry.status === 'skipped' ? 'Period was skipped.' : 'Period was snoozed.'}
+                                </p>
+                              )}
+                              <div className="mt-3 pt-3 border-t border-white/[0.06] flex items-center gap-4">
+                                <span className="text-xs text-white/30">{entry.periodLabel}</span>
+                                <span className="text-xs text-white/30">{formatTime(entry.periodStart)} – {formatTime(entry.periodEnd)}</span>
+                                <span className="text-xs text-white/30">{formatDate(entry.createdAt)}</span>
+                                <div className="ml-auto flex gap-2">
+                                  {entry.status === 'written' && (
+                                    <button
+                                      onClick={() => { setEditingEntryId(entry.id); setEditingEntryText(entry.text) }}
+                                      className="text-xs text-white/35 hover:text-violet-400 transition-colors"
+                                    >
+                                      Edit
+                                    </button>
+                                  )}
+                                  {confirmDeleteId === entry.id ? (
+                                    <>
+                                      <span className="text-xs text-white/35">Delete?</span>
+                                      <button
+                                        onClick={() => deleteEntry(entry.id)}
+                                        className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                                      >
+                                        Yes
+                                      </button>
+                                      <button
+                                        onClick={() => setConfirmDeleteId(null)}
+                                        className="text-xs text-white/35 hover:text-white/60 transition-colors"
+                                      >
+                                        No
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <button
+                                      onClick={() => setConfirmDeleteId(entry.id)}
+                                      className="text-xs text-white/35 hover:text-red-400 transition-colors"
+                                    >
+                                      Delete
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </>
                           )}
-                          <div className="mt-3 pt-3 border-t border-white/[0.06] flex gap-4 text-xs text-white/30">
-                            <span>Period: {entry.periodLabel}</span>
-                            <span>{formatTime(entry.periodStart)} – {formatTime(entry.periodEnd)}</span>
-                            <span>{formatDate(entry.createdAt)}</span>
-                          </div>
                         </div>
                       </div>
                     )}
@@ -245,9 +367,7 @@ export default function App() {
                 >
                   ← Newer
                 </button>
-                <span className="text-xs text-white/30">
-                  {offset + 1}–{offset + entries.length}
-                </span>
+                <span className="text-xs text-white/30">{offset + 1}–{offset + entries.length}</span>
                 <button
                   onClick={() => loadEntries(offset + PAGE_SIZE)}
                   disabled={!hasMore}
@@ -260,42 +380,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ── General tab ── */}
-        {tab === 'general' && settings && (
-          <div className="flex-1 overflow-y-auto px-5 py-4">
-            <div className="space-y-5">
-              <Row label="Launch at login">
-                <Toggle value={settings.autostart} onChange={(v) => saveSetting('autostart', v)} />
-              </Row>
-              <Row label="Notification sound">
-                <Toggle value={settings.notificationSound} onChange={(v) => saveSetting('notificationSound', v)} />
-              </Row>
-              <Row label="Snooze duration (minutes)">
-                <input
-                  type="number"
-                  min={1}
-                  max={120}
-                  value={settings.snoozeDurationMinutes}
-                  onChange={(e) => saveSetting('snoozeDurationMinutes', Number(e.target.value))}
-                  className="w-20 border border-white/[0.12] rounded-md px-2 py-1 text-sm
-                    bg-white/[0.06] text-white/80 focus:outline-none focus:border-violet-500/50 transition-colors"
-                />
-              </Row>
-              <Row label="Missed period window (minutes)">
-                <input
-                  type="number"
-                  min={1}
-                  max={240}
-                  value={settings.missedWindowMinutes}
-                  onChange={(e) => saveSetting('missedWindowMinutes', Number(e.target.value))}
-                  className="w-20 border border-white/[0.12] rounded-md px-2 py-1 text-sm
-                    bg-white/[0.06] text-white/80 focus:outline-none focus:border-violet-500/50 transition-colors"
-                />
-              </Row>
-            </div>
-          </div>
-        )}
-
         {/* ── Periods tab ── */}
         {tab === 'periods' && (
           <div className="flex-1 overflow-y-auto px-5 py-4">
@@ -303,36 +387,19 @@ export default function App() {
               {periods.length === 0 && !form && (
                 <p className="text-sm text-white/30">No periods yet. Add one below.</p>
               )}
-
               {periods.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex items-center gap-3 border border-white/[0.09] rounded-lg px-3 py-2 bg-white/[0.04] backdrop-blur-sm"
-                >
+                <div key={p.id} className="flex items-center gap-3 border border-white/[0.09] rounded-lg px-3 py-2 bg-white/[0.04]">
                   <Toggle value={p.active} onChange={(v) => toggleActive(p.id, v)} />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate text-white/80">{p.label}</div>
-                    <div className="text-xs text-white/35">
-                      {p.startTime} – {p.endTime} · {p.days.join(', ')}
-                    </div>
+                    <div className="text-xs text-white/35">{p.startTime} – {p.endTime} · {p.days.join(', ')}</div>
                   </div>
-                  <button
-                    onClick={() => startEdit(p)}
-                    className="text-xs text-white/35 hover:text-violet-400 px-1 transition-colors"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => deletePeriod(p.id)}
-                    className="text-xs text-white/35 hover:text-red-400 px-1 transition-colors"
-                  >
-                    Delete
-                  </button>
+                  <button onClick={() => startEdit(p)} className="text-xs text-white/35 hover:text-violet-400 px-1 transition-colors">Edit</button>
+                  <button onClick={() => deletePeriod(p.id)} className="text-xs text-white/35 hover:text-red-400 px-1 transition-colors">Delete</button>
                 </div>
               ))}
-
               {form ? (
-                <div className="border border-violet-500/25 rounded-lg p-3 space-y-3 bg-violet-500/[0.06] backdrop-blur-sm">
+                <div className="border border-violet-500/25 rounded-lg p-3 space-y-3 bg-violet-500/[0.06]">
                   <div>
                     <label className="text-xs text-white/45 block mb-1">Label</label>
                     <input
@@ -340,48 +407,24 @@ export default function App() {
                       value={form.label}
                       onChange={(e) => setForm({ ...form, label: e.target.value })}
                       placeholder="e.g. Morning block"
-                      className="w-full border border-white/[0.12] rounded-md px-2 py-1 text-sm
-                        bg-white/[0.06] text-white/80 placeholder-white/25
-                        focus:outline-none focus:border-violet-500/50 transition-colors"
+                      className="w-full border border-white/[0.12] rounded-md px-2 py-1 text-sm bg-white/[0.06] text-white/80 placeholder-white/25 focus:outline-none focus:border-violet-500/50 transition-colors"
                     />
                   </div>
                   <div className="flex gap-3">
                     <div className="flex-1">
                       <label className="text-xs text-white/45 block mb-1">Start</label>
-                      <input
-                        type="time"
-                        value={form.startTime}
-                        onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-                        className="w-full border border-white/[0.12] rounded-md px-2 py-1 text-sm
-                          bg-white/[0.06] text-white/80 focus:outline-none focus:border-violet-500/50 transition-colors"
-                      />
+                      <input type="time" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} className="w-full border border-white/[0.12] rounded-md px-2 py-1 text-sm bg-white/[0.06] text-white/80 focus:outline-none focus:border-violet-500/50 transition-colors" />
                     </div>
                     <div className="flex-1">
                       <label className="text-xs text-white/45 block mb-1">End</label>
-                      <input
-                        type="time"
-                        value={form.endTime}
-                        onChange={(e) => setForm({ ...form, endTime: e.target.value })}
-                        className="w-full border border-white/[0.12] rounded-md px-2 py-1 text-sm
-                          bg-white/[0.06] text-white/80 focus:outline-none focus:border-violet-500/50 transition-colors"
-                      />
+                      <input type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="w-full border border-white/[0.12] rounded-md px-2 py-1 text-sm bg-white/[0.06] text-white/80 focus:outline-none focus:border-violet-500/50 transition-colors" />
                     </div>
                   </div>
                   <div>
                     <label className="text-xs text-white/45 block mb-1">Days</label>
                     <div className="flex gap-1">
                       {DAYS.map((d) => (
-                        <button
-                          key={d}
-                          onClick={() => toggleDay(d)}
-                          className={`px-2 py-0.5 rounded text-xs transition-colors ${
-                            form.days.includes(d)
-                              ? 'bg-violet-600 text-white shadow-sm shadow-violet-900/40'
-                              : 'bg-white/[0.07] text-white/45 hover:bg-white/[0.12] hover:text-white/70'
-                          }`}
-                        >
-                          {d}
-                        </button>
+                        <button key={d} onClick={() => toggleDay(d)} className={`px-2 py-0.5 rounded text-xs transition-colors ${form.days.includes(d) ? 'bg-violet-600 text-white' : 'bg-white/[0.07] text-white/45 hover:bg-white/[0.12]'}`}>{d}</button>
                       ))}
                     </div>
                   </div>
@@ -391,35 +434,97 @@ export default function App() {
                       <span>Active</span>
                     </div>
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => { setForm(null); setEditingId(null) }}
-                        className="px-3 py-1 text-sm text-white/45 hover:text-white/70 hover:bg-white/[0.07] rounded-md transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={submitPeriod}
-                        disabled={form.days.length === 0}
-                        className="px-3 py-1 text-sm bg-violet-600 hover:bg-violet-500 disabled:opacity-30 text-white rounded-md transition-colors shadow-lg shadow-violet-900/40"
-                      >
-                        {editingId !== null ? 'Save' : 'Add'}
-                      </button>
+                      <button onClick={() => { setForm(null); setEditingId(null) }} className="px-3 py-1 text-sm text-white/45 hover:bg-white/[0.07] rounded-md transition-colors">Cancel</button>
+                      <button onClick={submitPeriod} disabled={form.days.length === 0} className="px-3 py-1 text-sm bg-violet-600 hover:bg-violet-500 disabled:opacity-30 text-white rounded-md transition-colors">{editingId !== null ? 'Save' : 'Add'}</button>
                     </div>
                   </div>
                 </div>
               ) : (
-                <button
-                  onClick={() => { setEditingId(null); setForm(emptyForm()) }}
-                  className="w-full border border-dashed border-white/[0.12] rounded-lg py-2 text-sm text-white/30
-                    hover:border-violet-500/40 hover:text-violet-400 transition-colors"
-                >
+                <button onClick={() => { setEditingId(null); setForm(emptyForm()) }} className="w-full border border-dashed border-white/[0.12] rounded-lg py-2 text-sm text-white/30 hover:border-violet-500/40 hover:text-violet-400 transition-colors">
                   + Add period
                 </button>
               )}
             </div>
           </div>
         )}
+
+        {/* ── Settings tab ── */}
+        {tab === 'settings' && appSettings && (
+          <div className="flex-1 overflow-y-auto px-5 py-4">
+            <div className="space-y-5">
+              <Row label="Launch at login">
+                <Toggle value={appSettings.autostart} onChange={(v) => saveSetting('autostart', v)} />
+              </Row>
+              <Row label="Notification sound">
+                <Toggle value={appSettings.notificationSound} onChange={(v) => saveSetting('notificationSound', v)} />
+              </Row>
+              <Row label="Snooze duration (minutes)">
+                <input type="number" min={1} max={120} value={appSettings.snoozeDurationMinutes} onChange={(e) => saveSetting('snoozeDurationMinutes', Number(e.target.value))} className="w-20 border border-white/[0.12] rounded-md px-2 py-1 text-sm bg-white/[0.06] text-white/80 focus:outline-none focus:border-violet-500/50 transition-colors" />
+              </Row>
+              <Row label="Missed period window (minutes)">
+                <input type="number" min={1} max={240} value={appSettings.missedWindowMinutes} onChange={(e) => saveSetting('missedWindowMinutes', Number(e.target.value))} className="w-20 border border-white/[0.12] rounded-md px-2 py-1 text-sm bg-white/[0.06] text-white/80 focus:outline-none focus:border-violet-500/50 transition-colors" />
+              </Row>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* ── Compose overlay — shown when a period ends ── */}
+      {composePeriod && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-[480px] rounded-2xl bg-[#0f1220] border border-white/[0.12] shadow-2xl overflow-hidden">
+            <div className="px-5 pt-5 pb-3 border-b border-white/[0.07]">
+              <p className="text-xs text-white/40 mb-0.5">Period ended</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-base font-semibold text-white/90">{composePeriod.periodLabel}</span>
+                <span className="text-sm text-white/40">{formatTime(composePeriod.start)} – {formatTime(composePeriod.end)}</span>
+              </div>
+            </div>
+            <div className="px-5 py-3">
+              <textarea
+                ref={textareaRef}
+                value={composeText}
+                onChange={(e) => setComposeText(e.target.value)}
+                onKeyDown={(e) => {
+                  if((e.metaKey || e.ctrlKey) && e.key === 'Enter') submitEntry('written')
+                  if(e.key === 'Escape') submitEntry('skipped')
+                }}
+                placeholder="What did you accomplish this period?"
+                rows={5}
+                className="w-full resize-none rounded-lg p-3 text-sm
+                  bg-white/[0.06] border border-white/[0.10]
+                  text-white/90 placeholder-white/25
+                  focus:outline-none focus:border-violet-500/50 transition-colors"
+              />
+            </div>
+            <div className="flex gap-2 px-5 pb-5">
+              <button
+                onClick={() => submitEntry('written')}
+                disabled={composeBusy || !composeText.trim()}
+                className="flex-1 rounded-lg py-2 text-sm font-medium
+                  bg-violet-600 hover:bg-violet-500 disabled:opacity-30 text-white
+                  transition-colors shadow-lg shadow-violet-900/40"
+              >
+                Submit  <span className="text-white/40 text-xs ml-1">⌘↵</span>
+              </button>
+              <button
+                onClick={() => submitEntry('snoozed')}
+                disabled={composeBusy}
+                className="px-4 rounded-lg py-2 text-sm bg-white/[0.07] hover:bg-white/[0.12] border border-white/[0.08] text-white/60 hover:text-white/80 disabled:opacity-30 transition-colors"
+              >
+                Snooze
+              </button>
+              <button
+                onClick={() => submitEntry('skipped')}
+                disabled={composeBusy}
+                className="px-4 rounded-lg py-2 text-sm bg-white/[0.07] hover:bg-white/[0.12] border border-white/[0.08] text-white/60 hover:text-white/80 disabled:opacity-30 transition-colors"
+              >
+                Skip
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -442,11 +547,7 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
         value ? 'bg-violet-600' : 'bg-white/[0.15]'
       }`}
     >
-      <span
-        className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${
-          value ? 'translate-x-4' : 'translate-x-0'
-        }`}
-      />
+      <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${value ? 'translate-x-4' : 'translate-x-0'}`} />
     </button>
   )
 }
