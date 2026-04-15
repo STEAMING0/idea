@@ -15,7 +15,8 @@
     "dist:win": "electron-builder --win",
     "dist:linux": "electron-builder --linux",
     "typecheck": "tsc --noEmit",
-    "rebuild": "electron-rebuild -f -w better-sqlite3"
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "postinstall": "node -e \"const fs=require('fs'),p='node_modules/@electron-toolkit/tsconfig';fs.writeFileSync(p+'/tsconfig.main.json',JSON.stringify({extends:'./tsconfig.node.json'}));fs.writeFileSync(p+'/tsconfig.renderer.json',JSON.stringify({extends:'./tsconfig.web.json'}));\""
   },
   "dependencies": {
     "better-sqlite3": "^9.4.3",
@@ -23,7 +24,7 @@
   },
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.0",
-    "@electron-toolkit/tsconfig": "^1.0.1",
+    "@electron-toolkit/tsconfig": "^2.0.0",
     "@electron-toolkit/utils": "^3.0.0",
     "@electron/rebuild": "^3.6.0",
     "@types/better-sqlite3": "^7.6.8",

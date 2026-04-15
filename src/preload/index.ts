@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcChannel, IpcInput, IpcOutput } from '@shared/types/ipc'
 
-// Placeholder — full typed bridge in Phase 2
+// Typed bridge — invoke for request/response, on for push events from main
 contextBridge.exposeInMainWorld('ipc', {
   invoke: <C extends IpcChannel>(channel: C, input: IpcInput<C>): Promise<IpcOutput<C>> =>
     ipcRenderer.invoke(channel, input),
