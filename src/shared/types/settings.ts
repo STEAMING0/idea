@@ -3,7 +3,6 @@ export interface AppSettings {
   autostart: boolean
   snoozeDurationMinutes: number  // how long a snooze defers the prompt
   missedWindowMinutes: number    // how long after period end before auto-skip
-  theme: 'light' | 'dark' | 'system'
   notificationSound: boolean
 }
 
@@ -11,7 +10,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   autostart: true,
   snoozeDurationMinutes: 15,
   missedWindowMinutes: 30,
-  theme: 'system',
   notificationSound: true
 }
 

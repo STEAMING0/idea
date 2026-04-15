@@ -1,3 +1,65 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── Aurora background ── */
+.aurora-wrap {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.aurora-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+}
+
+.aurora-1 {
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle at 40% 40%, #5b21b6, transparent 70%);
+  top: -200px;
+  left: -200px;
+  opacity: 0.55;
+  animation: aurora-drift 13s ease-in-out infinite;
+}
+
+.aurora-2 {
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(circle at 60% 60%, #0369a1, transparent 70%);
+  bottom: -160px;
+  right: -160px;
+  opacity: 0.45;
+  animation: aurora-drift 16s ease-in-out infinite reverse;
+  animation-delay: -5s;
+}
+
+.aurora-3 {
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle at 50% 50%, #9d174d, transparent 70%);
+  top: 35%;
+  left: 55%;
+  opacity: 0.35;
+  animation: aurora-drift 11s ease-in-out infinite;
+  animation-delay: -8s;
+}
+
+@keyframes aurora-drift {
+  0%,  100% { transform: translate(0,    0)    scale(1)    rotate(0deg);  }
+  25%        { transform: translate(45px, -35px) scale(1.08) rotate(6deg);  }
+  50%        { transform: translate(-30px, 50px) scale(0.93) rotate(-4deg); }
+  75%        { transform: translate(55px,  25px) scale(1.05) rotate(9deg);  }
+}
+
+/* ── Canvas particle overlay ── */
+.particle-canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}

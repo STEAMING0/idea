@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import type { Entry } from '@shared/types/entry'
 import { formatDate, formatTime } from '@shared/utils/time'
+import AnimatedBg from '@renderer/components/AnimatedBg'
 
 const PAGE_SIZE = 50
 
 const STATUS_STYLES: Record<Entry['status'], string> = {
-  written:  'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400',
-  skipped:  'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
-  snoozed:  'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400'
+  written: 'bg-violet-500/20 text-violet-300 border border-violet-500/25',
+  skipped: 'bg-white/[0.06] text-white/40 border border-white/[0.08]',
+  snoozed: 'bg-amber-500/20 text-amber-300 border border-amber-500/25',
 }
 
 export default function App() {
@@ -35,83 +36,87 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
-      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-gray-800 shrink-0">
-        <span className="font-semibold text-sm">Journal Log</span>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => exportFile('text')}
-            disabled={exporting || entries.length === 0}
-            className="text-xs px-2 py-1 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded disabled:opacity-40"
-          >
-            Export TXT
-          </button>
-          <button
-            onClick={() => exportFile('csv')}
-            disabled={exporting || entries.length === 0}
-            className="text-xs px-2 py-1 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded disabled:opacity-40"
-          >
-            Export CSV
-          </button>
-          <button
-            onClick={() => window.ipc.invoke('window:close', undefined as never)}
-            className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400 text-xl leading-none ml-1"
-          >
-            ×
-          </button>
-        </div>
-      </div>
+    <div className="flex flex-col h-screen bg-[#070b14] overflow-hidden">
+      <AnimatedBg />
 
-      <div className="flex-1 overflow-y-auto">
-        {loading && (
-          <div className="flex items-center justify-center h-32 text-sm text-gray-400">Loading...</div>
-        )}
-
-        {!loading && entries.length === 0 && (
-          <div className="flex items-center justify-center h-32 text-sm text-gray-400">No entries yet.</div>
-        )}
-
-        {!loading && entries.map((entry) => (
-          <div key={entry.id} className="px-5 py-3 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs text-gray-400 dark:text-gray-500">{formatDate(entry.createdAt)}</span>
-              <span className="text-xs text-gray-300 dark:text-gray-600">·</span>
-              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{entry.periodLabel}</span>
-              <span className="text-xs text-gray-300 dark:text-gray-600">
-                {formatTime(entry.periodStart)} – {formatTime(entry.periodEnd)}
-              </span>
-              <span className={`ml-auto text-xs px-1.5 py-0.5 rounded ${STATUS_STYLES[entry.status]}`}>
-                {entry.status}
-              </span>
-            </div>
-            {entry.status === 'written' && entry.text && (
-              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-snug">{entry.text}</p>
-            )}
+      <div className="relative z-10 flex flex-col flex-1 min-h-0">
+        {/* header */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.07] shrink-0 backdrop-blur-sm">
+          <span className="font-semibold text-sm text-white/80">Journal Log</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => exportFile('text')}
+              disabled={exporting || entries.length === 0}
+              className="text-xs px-2 py-1 text-white/40 hover:text-white/70 hover:bg-white/[0.07] rounded transition-colors disabled:opacity-30"
+            >
+              Export TXT
+            </button>
+            <button
+              onClick={() => exportFile('csv')}
+              disabled={exporting || entries.length === 0}
+              className="text-xs px-2 py-1 text-white/40 hover:text-white/70 hover:bg-white/[0.07] rounded transition-colors disabled:opacity-30"
+            >
+              Export CSV
+            </button>
           </div>
-        ))}
-      </div>
-
-      {!loading && (offset > 0 || hasMore) && (
-        <div className="flex items-center justify-between px-5 py-2 border-t border-gray-100 dark:border-gray-800 shrink-0">
-          <button
-            onClick={() => load(Math.max(0, offset - PAGE_SIZE))}
-            disabled={offset === 0}
-            className="text-xs px-3 py-1 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded disabled:opacity-30"
-          >
-            ← Newer
-          </button>
-          <span className="text-xs text-gray-400 dark:text-gray-500">
-            {offset + 1}–{offset + entries.length}
-          </span>
-          <button
-            onClick={() => load(offset + PAGE_SIZE)}
-            disabled={!hasMore}
-            className="text-xs px-3 py-1 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded disabled:opacity-30"
-          >
-            Older →
-          </button>
         </div>
-      )}
+
+        {/* entries list */}
+        <div className="flex-1 overflow-y-auto">
+          {loading && (
+            <div className="flex items-center justify-center h-32 text-sm text-white/30">Loading...</div>
+          )}
+
+          {!loading && entries.length === 0 && (
+            <div className="flex items-center justify-center h-32 text-sm text-white/30">No entries yet.</div>
+          )}
+
+          {!loading && entries.map((entry) => (
+            <div
+              key={entry.id}
+              className="px-5 py-3 border-b border-white/[0.05] hover:bg-white/[0.04] transition-colors"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs text-white/35">{formatDate(entry.createdAt)}</span>
+                <span className="text-xs text-white/20">·</span>
+                <span className="text-xs font-medium text-white/60">{entry.periodLabel}</span>
+                <span className="text-xs text-white/30">
+                  {formatTime(entry.periodStart)} – {formatTime(entry.periodEnd)}
+                </span>
+                <span className={`ml-auto text-xs px-1.5 py-0.5 rounded ${STATUS_STYLES[entry.status]}`}>
+                  {entry.status}
+                </span>
+              </div>
+              {entry.status === 'written' && entry.text && (
+                <p className="text-sm text-white/70 whitespace-pre-wrap leading-snug">{entry.text}</p>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* pagination */}
+        {!loading && (offset > 0 || hasMore) && (
+          <div className="flex items-center justify-between px-5 py-2 border-t border-white/[0.07] shrink-0">
+            <button
+              onClick={() => load(Math.max(0, offset - PAGE_SIZE))}
+              disabled={offset === 0}
+              className="text-xs px-3 py-1 text-white/40 hover:text-white/70 hover:bg-white/[0.07] rounded disabled:opacity-25 transition-colors"
+            >
+              ← Newer
+            </button>
+            <span className="text-xs text-white/30">
+              {offset + 1}–{offset + entries.length}
+            </span>
+            <button
+              onClick={() => load(offset + PAGE_SIZE)}
+              disabled={!hasMore}
+              className="text-xs px-3 py-1 text-white/40 hover:text-white/70 hover:bg-white/[0.07] rounded disabled:opacity-25 transition-colors"
+            >
+              Older →
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
