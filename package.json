@@ -1,5 +1,5 @@
 {
-  "name": "hourly-journal",
+  "name": "computerjournal",
   "version": "0.1.0",
   "description": "A background journaling app that prompts you to log accomplishments at the end of custom time periods.",
   "main": "out/main/index.js",

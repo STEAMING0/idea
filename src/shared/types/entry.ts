@@ -1,5 +1,4 @@
-// The outcome of a period prompt — either written, skipped, or snoozed
-export type EntryStatus = 'written' | 'skipped' | 'snoozed'
+export type EntryStatus = 'written' | 'skipped'
 
 export interface Entry {
   id: number
@@ -10,7 +9,6 @@ export interface Entry {
   text: string
   status: EntryStatus
   createdAt: string    // ISO 8601
-  snoozeUntil: string | null // ISO 8601, only set when status is 'snoozed'
 }
 
 export type CreateEntryInput = Omit<Entry, 'id'>

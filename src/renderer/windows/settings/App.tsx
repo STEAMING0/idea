@@ -4,7 +4,6 @@ import type { Period, CreatePeriodInput, DayOfWeek } from '@shared/types/period'
 import type { Entry } from '@shared/types/entry'
 import type { IpcInput } from '@shared/types/ipc'
 import { formatDate, formatTime } from '@shared/utils/time'
-import AnimatedBg from '@renderer/components/AnimatedBg'
 
 const DAYS: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const PAGE_SIZE = 50
@@ -29,9 +28,8 @@ const emptyForm = (): PeriodForm => ({
 })
 
 const STATUS_STYLES: Record<Entry['status'], string> = {
-  written: 'bg-violet-500/20 text-violet-300 border border-violet-500/25',
+  written: 'bg-orange-500/20 text-orange-300 border border-orange-500/25',
   skipped: 'bg-white/[0.06] text-white/40 border border-white/[0.08]',
-  snoozed: 'bg-amber-500/20 text-amber-300 border border-amber-500/25',
 }
 
 export default function App() {
@@ -99,15 +97,9 @@ export default function App() {
   }
 
   // ── compose submit ──
-  const submitEntry = async (status: 'written' | 'skipped' | 'snoozed') => {
+  const submitEntry = async (status: 'written' | 'skipped') => {
     if(!composePeriod || composeBusy) return
     setComposeBusy(true)
-
-    let snoozeUntil: string | null = null
-    if(status === 'snoozed'){
-      const s = await window.ipc.invoke('settings:getAll', undefined as never)
-      snoozeUntil = new Date(Date.now() + s.snoozeDurationMinutes * 60 * 1000).toISOString()
-    }
 
     await window.ipc.invoke('entries:create', {
       periodId: composePeriod.periodId,
@@ -116,8 +108,7 @@ export default function App() {
       periodEnd: composePeriod.end,
       text: status === 'written' ? composeText.trim() : '',
       status,
-      createdAt: new Date().toISOString(),
-      snoozeUntil
+      createdAt: new Date().toISOString()
     })
 
     setComposePeriod(null)
@@ -180,50 +171,23 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#070b14] overflow-hidden">
-      <AnimatedBg />
-
-      <div className="relative z-10 flex flex-col flex-1 min-h-0">
+    <div className="flex flex-col h-screen bg-red-600 overflow-hidden">
+      <div className="flex flex-col flex-1 min-h-0">
 
         {/* ── top bar ── */}
-        <div className="px-5 py-3 border-b border-white/[0.07] flex items-center justify-between shrink-0">
-          <span className="font-semibold text-sm text-white/80">Hourly Journal</span>
-          {tab === 'journal' && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => loadEntries(0)}
-                disabled={loadingEntries}
-                className="text-xs px-2 py-1 text-white/40 hover:text-white/70 hover:bg-white/[0.07] rounded transition-colors disabled:opacity-30"
-              >
-                Refresh
-              </button>
-              <button
-                onClick={() => exportFile('text')}
-                disabled={exporting || entries.length === 0}
-                className="text-xs px-2 py-1 text-white/40 hover:text-white/70 hover:bg-white/[0.07] rounded transition-colors disabled:opacity-30"
-              >
-                Export TXT
-              </button>
-              <button
-                onClick={() => exportFile('csv')}
-                disabled={exporting || entries.length === 0}
-                className="text-xs px-2 py-1 text-white/40 hover:text-white/70 hover:bg-white/[0.07] rounded transition-colors disabled:opacity-30"
-              >
-                Export CSV
-              </button>
-            </div>
-          )}
+        <div className="px-5 py-4 border-b border-white/[0.07] flex items-center justify-center shrink-0">
+          <span className="font-bold text-2xl text-white">THIS IS MY JOURNAL :)</span>
         </div>
 
         {/* ── tabs ── */}
-        <div className="flex gap-1 px-5 pt-3 pb-1 shrink-0">
+        <div className="flex justify-between px-5 pt-3 pb-1 shrink-0">
           {(['journal', 'periods', 'settings'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-3 py-1 text-sm rounded-md capitalize transition-colors ${
+              className={`flex-1 py-1 text-sm rounded-md capitalize transition-colors ${
                 tab === t
-                  ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/40'
+                  ? 'bg-orange-600 text-white shadow-lg shadow-orange-900/40'
                   : 'text-white/50 hover:text-white/80 hover:bg-white/[0.07]'
               }`}
             >
@@ -256,12 +220,12 @@ export default function App() {
                       <div className="flex items-center gap-2">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-medium text-white/70">{entry.periodLabel}</span>
+                            <span className="text-xs text-white/70">{entry.periodLabel}</span>
                             <span className="text-xs text-white/30">{formatTime(entry.periodStart)} – {formatTime(entry.periodEnd)}</span>
-                            <span className="text-xs text-white/25">{formatDate(entry.createdAt)}</span>
+                            <span className="text-xs text-white/30">{formatDate(entry.createdAt)}</span>
                           </div>
                           {entry.status === 'written' && entry.text && !isExpanded && (
-                            <p className="text-sm text-white/55 mt-0.5 truncate leading-snug">{entry.text}</p>
+                            <p className="text-xs text-white/55 mt-0.5 truncate leading-snug">{entry.text}</p>
                           )}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
@@ -283,12 +247,12 @@ export default function App() {
                                 rows={4}
                                 className="w-full resize-none rounded-md p-2 text-sm
                                   bg-white/[0.06] border border-white/[0.12] text-white/90
-                                  focus:outline-none focus:border-violet-500/50 transition-colors"
+                                  focus:outline-none focus:border-orange-500/50 transition-colors"
                               />
                               <div className="flex gap-2 mt-2">
                                 <button
                                   onClick={() => saveEntryEdit(entry.id)}
-                                  className="px-3 py-1 text-xs bg-violet-600 hover:bg-violet-500 text-white rounded-md transition-colors"
+                                  className="px-3 py-1 text-xs bg-orange-600 hover:bg-orange-500 text-white rounded-md transition-colors"
                                 >
                                   Save
                                 </button>
@@ -306,18 +270,15 @@ export default function App() {
                                 <p className="text-sm text-white/75 whitespace-pre-wrap leading-relaxed">{entry.text}</p>
                               ) : (
                                 <p className="text-sm text-white/25 italic">
-                                  {entry.status === 'skipped' ? 'Period was skipped.' : 'Period was snoozed.'}
+                                  Period was skipped.
                                 </p>
                               )}
                               <div className="mt-3 pt-3 border-t border-white/[0.06] flex items-center gap-4">
-                                <span className="text-xs text-white/30">{entry.periodLabel}</span>
-                                <span className="text-xs text-white/30">{formatTime(entry.periodStart)} – {formatTime(entry.periodEnd)}</span>
-                                <span className="text-xs text-white/30">{formatDate(entry.createdAt)}</span>
                                 <div className="ml-auto flex gap-2">
                                   {entry.status === 'written' && (
                                     <button
                                       onClick={() => { setEditingEntryId(entry.id); setEditingEntryText(entry.text) }}
-                                      className="text-xs text-white/35 hover:text-violet-400 transition-colors"
+                                      className="text-xs text-white/35 hover:text-orange-400 transition-colors"
                                     >
                                       Edit
                                     </button>
@@ -394,12 +355,12 @@ export default function App() {
                     <div className="text-sm font-medium truncate text-white/80">{p.label}</div>
                     <div className="text-xs text-white/35">{p.startTime} – {p.endTime} · {p.days.join(', ')}</div>
                   </div>
-                  <button onClick={() => startEdit(p)} className="text-xs text-white/35 hover:text-violet-400 px-1 transition-colors">Edit</button>
+                  <button onClick={() => startEdit(p)} className="text-xs text-white/35 hover:text-orange-400 px-1 transition-colors">Edit</button>
                   <button onClick={() => deletePeriod(p.id)} className="text-xs text-white/35 hover:text-red-400 px-1 transition-colors">Delete</button>
                 </div>
               ))}
               {form ? (
-                <div className="border border-violet-500/25 rounded-lg p-3 space-y-3 bg-violet-500/[0.06]">
+                <div className="border border-orange-500/25 rounded-lg p-3 space-y-3 bg-orange-500/[0.06]">
                   <div>
                     <label className="text-xs text-white/45 block mb-1">Label</label>
                     <input
@@ -407,24 +368,24 @@ export default function App() {
                       value={form.label}
                       onChange={(e) => setForm({ ...form, label: e.target.value })}
                       placeholder="e.g. Morning block"
-                      className="w-full border border-white/[0.12] rounded-md px-2 py-1 text-sm bg-white/[0.06] text-white/80 placeholder-white/25 focus:outline-none focus:border-violet-500/50 transition-colors"
+                      className="w-full border border-white/[0.12] rounded-md px-2 py-1 text-sm bg-white/[0.06] text-white/80 placeholder-white/25 focus:outline-none focus:border-orange-500/50 transition-colors"
                     />
                   </div>
                   <div className="flex gap-3">
                     <div className="flex-1">
                       <label className="text-xs text-white/45 block mb-1">Start</label>
-                      <input type="time" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} className="w-full border border-white/[0.12] rounded-md px-2 py-1 text-sm bg-white/[0.06] text-white/80 focus:outline-none focus:border-violet-500/50 transition-colors" />
+                      <input type="time" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} className="w-full border border-white/[0.12] rounded-md px-2 py-1 text-sm bg-white/[0.06] text-white/80 focus:outline-none focus:border-orange-500/50 transition-colors" />
                     </div>
                     <div className="flex-1">
                       <label className="text-xs text-white/45 block mb-1">End</label>
-                      <input type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="w-full border border-white/[0.12] rounded-md px-2 py-1 text-sm bg-white/[0.06] text-white/80 focus:outline-none focus:border-violet-500/50 transition-colors" />
+                      <input type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="w-full border border-white/[0.12] rounded-md px-2 py-1 text-sm bg-white/[0.06] text-white/80 focus:outline-none focus:border-orange-500/50 transition-colors" />
                     </div>
                   </div>
                   <div>
                     <label className="text-xs text-white/45 block mb-1">Days</label>
                     <div className="flex gap-1">
                       {DAYS.map((d) => (
-                        <button key={d} onClick={() => toggleDay(d)} className={`px-2 py-0.5 rounded text-xs transition-colors ${form.days.includes(d) ? 'bg-violet-600 text-white' : 'bg-white/[0.07] text-white/45 hover:bg-white/[0.12]'}`}>{d}</button>
+                        <button key={d} onClick={() => toggleDay(d)} className={`px-2 py-0.5 rounded text-xs transition-colors ${form.days.includes(d) ? 'bg-orange-600 text-white' : 'bg-white/[0.07] text-white/45 hover:bg-white/[0.12]'}`}>{d}</button>
                       ))}
                     </div>
                   </div>
@@ -435,12 +396,12 @@ export default function App() {
                     </div>
                     <div className="flex gap-2">
                       <button onClick={() => { setForm(null); setEditingId(null) }} className="px-3 py-1 text-sm text-white/45 hover:bg-white/[0.07] rounded-md transition-colors">Cancel</button>
-                      <button onClick={submitPeriod} disabled={form.days.length === 0} className="px-3 py-1 text-sm bg-violet-600 hover:bg-violet-500 disabled:opacity-30 text-white rounded-md transition-colors">{editingId !== null ? 'Save' : 'Add'}</button>
+                      <button onClick={submitPeriod} disabled={form.days.length === 0} className="px-3 py-1 text-sm bg-orange-600 hover:bg-orange-500 disabled:opacity-30 text-white rounded-md transition-colors">{editingId !== null ? 'Save' : 'Add'}</button>
                     </div>
                   </div>
                 </div>
               ) : (
-                <button onClick={() => { setEditingId(null); setForm(emptyForm()) }} className="w-full border border-dashed border-white/[0.12] rounded-lg py-2 text-sm text-white/30 hover:border-violet-500/40 hover:text-violet-400 transition-colors">
+                <button onClick={() => { setEditingId(null); setForm(emptyForm()) }} className="w-full border border-dashed border-white/[0.12] rounded-lg py-2 text-sm text-white/30 hover:border-orange-500/40 hover:text-orange-400 transition-colors">
                   + Add period
                 </button>
               )}
@@ -452,18 +413,31 @@ export default function App() {
         {tab === 'settings' && appSettings && (
           <div className="flex-1 overflow-y-auto px-5 py-4">
             <div className="space-y-5">
-              <Row label="Launch at login">
-                <Toggle value={appSettings.autostart} onChange={(v) => saveSetting('autostart', v)} />
-              </Row>
-              <Row label="Notification sound">
-                <Toggle value={appSettings.notificationSound} onChange={(v) => saveSetting('notificationSound', v)} />
-              </Row>
-              <Row label="Snooze duration (minutes)">
-                <input type="number" min={1} max={120} value={appSettings.snoozeDurationMinutes} onChange={(e) => saveSetting('snoozeDurationMinutes', Number(e.target.value))} className="w-20 border border-white/[0.12] rounded-md px-2 py-1 text-sm bg-white/[0.06] text-white/80 focus:outline-none focus:border-violet-500/50 transition-colors" />
-              </Row>
-              <Row label="Missed period window (minutes)">
-                <input type="number" min={1} max={240} value={appSettings.missedWindowMinutes} onChange={(e) => saveSetting('missedWindowMinutes', Number(e.target.value))} className="w-20 border border-white/[0.12] rounded-md px-2 py-1 text-sm bg-white/[0.06] text-white/80 focus:outline-none focus:border-violet-500/50 transition-colors" />
-              </Row>
+<div className="pt-2 border-t border-white/[0.07] flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => loadEntries(0)}
+                    disabled={loadingEntries}
+                    className="px-3 py-1.5 text-sm text-white/70 hover:text-white bg-white/[0.07] hover:bg-white/[0.12] rounded-md transition-colors disabled:opacity-30"
+                  >
+                    Refresh
+                  </button>
+                  <button
+                    onClick={() => exportFile('text')}
+                    disabled={exporting || entries.length === 0}
+                    className="px-3 py-1.5 text-sm text-white/70 hover:text-white bg-white/[0.07] hover:bg-white/[0.12] rounded-md transition-colors disabled:opacity-30"
+                  >
+                    Export TXT
+                  </button>
+                  <button
+                    onClick={() => exportFile('csv')}
+                    disabled={exporting || entries.length === 0}
+                    className="px-3 py-1.5 text-sm text-white/70 hover:text-white bg-white/[0.07] hover:bg-white/[0.12] rounded-md transition-colors disabled:opacity-30"
+                  >
+                    Export CSV
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -494,7 +468,7 @@ export default function App() {
                 className="w-full resize-none rounded-lg p-3 text-sm
                   bg-white/[0.06] border border-white/[0.10]
                   text-white/90 placeholder-white/25
-                  focus:outline-none focus:border-violet-500/50 transition-colors"
+                  focus:outline-none focus:border-orange-500/50 transition-colors"
               />
             </div>
             <div className="flex gap-2 px-5 pb-5">
@@ -502,17 +476,10 @@ export default function App() {
                 onClick={() => submitEntry('written')}
                 disabled={composeBusy || !composeText.trim()}
                 className="flex-1 rounded-lg py-2 text-sm font-medium
-                  bg-violet-600 hover:bg-violet-500 disabled:opacity-30 text-white
-                  transition-colors shadow-lg shadow-violet-900/40"
+                  bg-orange-600 hover:bg-orange-500 disabled:opacity-30 text-white
+                  transition-colors shadow-lg shadow-orange-900/40"
               >
                 Submit  <span className="text-white/40 text-xs ml-1">⌘↵</span>
-              </button>
-              <button
-                onClick={() => submitEntry('snoozed')}
-                disabled={composeBusy}
-                className="px-4 rounded-lg py-2 text-sm bg-white/[0.07] hover:bg-white/[0.12] border border-white/[0.08] text-white/60 hover:text-white/80 disabled:opacity-30 transition-colors"
-              >
-                Snooze
               </button>
               <button
                 onClick={() => submitEntry('skipped')}
@@ -544,7 +511,7 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
       type="button"
       onClick={() => onChange(!value)}
       className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
-        value ? 'bg-violet-600' : 'bg-white/[0.15]'
+        value ? 'bg-orange-600' : 'bg-white/[0.15]'
       }`}
     >
       <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${value ? 'translate-x-4' : 'translate-x-0'}`} />

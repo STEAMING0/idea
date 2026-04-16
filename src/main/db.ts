@@ -132,7 +132,6 @@ type EntryRow = {
   text: string
   status: string
   createdAt: string
-  snoozeUntil: string | null
 }
 
 function rowToEntry(row: EntryRow): Entry {
@@ -144,8 +143,7 @@ function rowToEntry(row: EntryRow): Entry {
     periodEnd: row.periodEnd,
     text: row.text,
     status: row.status as Entry['status'],
-    createdAt: row.createdAt,
-    snoozeUntil: row.snoozeUntil
+    createdAt: row.createdAt
   }
 }
 
@@ -173,11 +171,11 @@ export function getEntriesByPeriod(periodId: number): Entry[] {
 
 export function createEntry(input: CreateEntryInput): Entry {
   const result = db.prepare(`
-    INSERT INTO entries (periodId, periodLabel, periodStart, periodEnd, text, status, createdAt, snoozeUntil)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO entries (periodId, periodLabel, periodStart, periodEnd, text, status, createdAt)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run(
     input.periodId, input.periodLabel, input.periodStart, input.periodEnd,
-    input.text, input.status, input.createdAt, input.snoozeUntil
+    input.text, input.status, input.createdAt
   )
   const row = db.prepare('SELECT * FROM entries WHERE id = ?').get(result.lastInsertRowid) as EntryRow
   return rowToEntry(row)

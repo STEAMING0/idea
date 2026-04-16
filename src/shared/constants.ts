@@ -1,4 +1,4 @@
-export const APP_NAME = 'Hourly Journal'
+export const APP_NAME = 'computerjournal'
 
 // Window names — used as keys in WindowManager to prevent duplicates
 export const WINDOW_QUICK_ENTRY = 'quick-entry'

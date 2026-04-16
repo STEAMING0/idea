@@ -1,8 +1,8 @@
 import type { Configuration } from 'electron-builder'
 
 const config: Configuration = {
-  appId: 'com.hourlyjournal.app',
-  productName: 'Hourly Journal',
+  appId: 'com.computerjournal.app',
+  productName: 'computerjournal',
   directories: {
     buildResources: 'build',
     output: 'release'

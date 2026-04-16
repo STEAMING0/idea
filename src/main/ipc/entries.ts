@@ -2,9 +2,7 @@ import { ipcMain } from 'electron'
 import { getAllEntries, getEntriesByPeriod, createEntry, updateEntry, deleteEntry } from '../db'
 import type { IpcInput } from '@shared/types/ipc'
 
-type SnoozeCallback = (periodId: number, snoozeUntil: string) => void
-
-export function registerEntryHandlers(onSnooze: SnoozeCallback): void {
+export function registerEntryHandlers(): void {
   ipcMain.handle('entries:getAll', (_, input: IpcInput<'entries:getAll'>) =>
     getAllEntries(input.limit, input.offset)
   )
@@ -13,13 +11,9 @@ export function registerEntryHandlers(onSnooze: SnoozeCallback): void {
     getEntriesByPeriod(input.periodId)
   )
 
-  ipcMain.handle('entries:create', (_, input: IpcInput<'entries:create'>) => {
-    const entry = createEntry(input)
-    if(entry.status === 'snoozed' && entry.snoozeUntil){
-      onSnooze(entry.periodId, entry.snoozeUntil)
-    }
-    return entry
-  })
+  ipcMain.handle('entries:create', (_, input: IpcInput<'entries:create'>) =>
+    createEntry(input)
+  )
 
   ipcMain.handle('entries:update', (_, input: IpcInput<'entries:update'>) =>
     updateEntry(input.id, input.text)

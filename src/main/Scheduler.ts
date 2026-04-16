@@ -1,13 +1,12 @@
 import cron from 'node-cron'
 import { Notification } from 'electron'
-import { getAllPeriods, getAllSettings } from './db'
-import { buildCronExpression, todayDayOfWeek, wasRecentlyEnded, formatTime } from '@shared/utils/time'
+import { getAllPeriods } from './db'
+import { buildCronExpression, todayDayOfWeek, formatTime } from '@shared/utils/time'
 import type { WindowManager } from './WindowManager'
 import type { Period } from '@shared/types/period'
 
 export class Scheduler {
   private tasks = new Map<number, cron.ScheduledTask>()
-  private snoozeTimers = new Map<number, NodeJS.Timeout>()
   private wm: WindowManager
 
   constructor(wm: WindowManager) {
@@ -16,7 +15,6 @@ export class Scheduler {
 
   start(): void {
     this.reload()
-    this.checkMissedPeriods()
   }
 
   // Called whenever periods change so cron jobs stay in sync
@@ -33,25 +31,6 @@ export class Scheduler {
       })
       this.tasks.set(period.id, task)
     }
-  }
-
-  // Called from entries:create IPC when a snoozed entry is saved
-  snooze(periodId: number, snoozeUntil: string): void {
-    const period = getAllPeriods().find((p) => p.id === periodId)
-    if(!period) return
-
-    const existing = this.snoozeTimers.get(periodId)
-    if(existing) clearTimeout(existing)
-
-    const delayMs = new Date(snoozeUntil).getTime() - Date.now()
-    if(delayMs <= 0) return
-
-    const timer = setTimeout(() => {
-      this.snoozeTimers.delete(periodId)
-      this.trigger(period)
-    }, delayMs)
-
-    this.snoozeTimers.set(periodId, timer)
   }
 
   private trigger(period: Period): void {
@@ -72,17 +51,5 @@ export class Scheduler {
     }
 
     this.wm.showQuickEntry(data)
-  }
-
-  private checkMissedPeriods(): void {
-    const settings = getAllSettings()
-    const windowMinutes = settings.missedWindowMinutes
-    const today = todayDayOfWeek()
-
-    for(const period of getAllPeriods().filter((p) => p.active)){
-      if(period.days.includes(today) && wasRecentlyEnded(period.endTime, windowMinutes)){
-        this.trigger(period)
-      }
-    }
   }
 }

@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react'
 import type { Entry } from '@shared/types/entry'
 import { formatDate, formatTime } from '@shared/utils/time'
-import AnimatedBg from '@renderer/components/AnimatedBg'
-
 const PAGE_SIZE = 50
 
 const STATUS_STYLES: Record<Entry['status'], string> = {
-  written: 'bg-violet-500/20 text-violet-300 border border-violet-500/25',
+  written: 'bg-orange-500/20 text-orange-300 border border-orange-500/25',
   skipped: 'bg-white/[0.06] text-white/40 border border-white/[0.08]',
-  snoozed: 'bg-amber-500/20 text-amber-300 border border-amber-500/25',
 }
 
 export default function App() {
@@ -36,10 +33,8 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#070b14] overflow-hidden">
-      <AnimatedBg />
-
-      <div className="relative z-10 flex flex-col flex-1 min-h-0">
+    <div className="flex flex-col h-screen bg-red-600 overflow-hidden">
+      <div className="flex flex-col flex-1 min-h-0">
         {/* header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.07] shrink-0 backdrop-blur-sm">
           <span className="font-semibold text-sm text-white/80">Journal Log</span>
